@@ -1,6 +1,10 @@
+##########################################################################################################################################################
+# This is a version of the game of human control.
+##########################################################################################################################################################
 import numpy as np
 from itertools import groupby, chain
 import curses 
+
 
 def sum_elements_left(arr): 
     groupby_array =[list(g) for k , g in groupby(arr)]
