@@ -1,0 +1,96 @@
+from game_agent_friendly import PolicyNetwork, Agent, generate
+import torch
+import numpy as np
+import torch.optim as optim
+
+# Get GPU device if available:
+device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+print(f"Using {device} device")
+
+# Initialise policy network
+policy_model = PolicyNetwork().to(device)
+# Initialise agent using the policy network and the device the agent will use for training:
+agent = Agent(policy_model, [], device)
+
+# Initialise start state of the game:
+state_0 = np.array([[0 , 0 , 0 , 0] , [0 , 2 , 0 , 0] , [0 , 0 , 2 , 0 ] , [0 , 0 ,0 , 0]])
+
+# Helper function for computing future returns from time step t:
+def G_t(t, rewards, gamma): 
+    '''
+    Computes return in state at time t
+    '''
+    d = np.array([gamma**i for i in range(len(rewards) - t)])
+    r = rewards[t:]
+    return d@r
+
+# Helper function for computing the loss associated with an episode: 
+def reinforce_loss(agent, rewards, gamma):
+    '''
+    Computes the scalar loss function for the REINFORCE policy gradient.
+    Inputs: 
+    agent: Agent class type, 
+    rewards: list of rewards per time step over episode. 
+    gamma: float,  discount factor (between 0 and 1)
+    Returns: 
+    loss: scalar loss.
+    '''
+    # Compute list of returns:
+    G = [G_t(t , rewards, gamma) for t in range(len(rewards))]
+    # Subtract mean return over episode to obtain a baseline and divide by standard deviation to reduce variance (CRUDE but a good first stab): 
+    G = (G - np.mean(G))
+    return_tensor = torch.tensor(G, dtype = torch.float32 , device = device, requires_grad = False)
+    # Extract logits from episode: 
+    logits_tensor = torch.stack(agent.logits)
+
+    # Scalar loss function: 
+    loss = -return_tensor.dot(logits_tensor)
+    return loss 
+
+####################################################################################################
+# TRAINING 
+####################################################################################################
+NUM_EPISODES = 1000
+LEARNING_RATE = 1e-2
+GAMMA = 0.9
+# Using an ADAM optimiser for an initial test
+optimiser = optim.Adam(policy_model.parameters(), lr = LEARNING_RATE, weight_decay=1e-5)
+
+# tracking diagnostics: 
+episode_lengths = []
+max_tile = [] 
+
+for n in range(NUM_EPISODES):
+    print('RUNNING EPISODE: ', n)
+    optimiser.zero_grad()
+    # Initialise new agent: 
+    agent = Agent(policy_model, [], device)
+    # Generate an episode to train: 
+    states, actions, rewards = generate(state_0 , agent)
+    # Logging diagnostics: 
+    print('Length of episode: ', len(rewards))
+    episode_lengths.append(len(rewards))
+    print('Max tile: ', np.max(states))
+    max_tile.append(np.max(states))
+
+    # Compute loss: 
+    loss = reinforce_loss(agent, rewards, GAMMA)
+    # Compute gradients: 
+    loss.backward() 
+    # for name, param in policy_model.named_parameters(): 
+    #     print(param.grad)
+    # Implement optimisation step: 
+    optimiser.step()
+
+
+# Optional plotting step: 
+import matplotlib.pyplot as plt 
+fig , ax = plt.subplots(nrows = 1 , ncols = 2)
+ax[0].plot(max_tile)
+ax[0].set_xlabel(r'Episode')
+ax[0].set_ylabel(r'Max tile')
+ax[1].plot(episode_lengths)
+ax[1].set_xlabel(r'Episode')
+ax[1].set_ylabel(r'Episode lengths')
+plt.tight_layout()
+plt.show()

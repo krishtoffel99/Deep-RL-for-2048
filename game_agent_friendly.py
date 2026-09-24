@@ -206,7 +206,7 @@ class GameLoop:
         self.agent = agent
         self.input_handler = InputHandler(game)
 
-    def run(self):
+    def run(self, print_episode):
         states = []
         # Append starting state: 
         states.append(self.game.game_state)
@@ -225,30 +225,39 @@ class GameLoop:
             actions.append(action)
 
             # Compute reward associated with action: 
-            r = (np.max(self.game.game_state) - np.max(states[-1]))*0 + np.sum(self.game.game_state)
+            r = np.sum(self.game.game_state)
+
+            # Supply negative rewards for taking an action that does not change the game-board:
             if (self.game.game_state == states[-1]).all(): 
-                r += -10
+                r = rewards[-1] -100
+
+            # Supplying further negative rewards and terminating the state if the agent visits the same state 4 times in a row: 
+            if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
+                r += -400 
+                running = False
 
             rewards.append(r)
             # Check if agent trapped in terminal state (game over):
             gameover = self.game.gameover_check()
-            print('Gameover?: ' , gameover)
+
             if (gameover == None) and (len(np.argwhere(self.game.game_state == 0))==0):
-                # If agent is found to be trapped, terminate the game loop:
+                # If all cells are filled and no scope for further moves, terminate the game loop:
                 states.append(self.game.game_state)
                 running = False 
             else: 
                 states.append(self.game.game_state)
-            print(action)
-            print(self.game.game_state)
+
+            if print_episode:
+                print(action)
+                print(self.game.game_state)
             
         return states, actions, rewards
 
 
-def generate(state_0, agent):
+def generate(state_0, agent, print_episode = False):
     game = GameEnv(state_0)
     loop = GameLoop(game, agent)
-    episode = loop.run()
+    episode = loop.run(print_episode)
     return episode
 
 
