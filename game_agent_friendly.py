@@ -181,30 +181,46 @@ class PolicyNetwork(nn.Module):
         return logits
 
 class Agent: 
-    def __init__(self , policy: PolicyNetwork, logits, device):
+    def __init__(self , policy: PolicyNetwork, logits, entropy, device):
         self.policy = policy
         self.device = device
         self.logits = logits
+        self.entropy = entropy
     def agent_key_press(self, state):
         # Load game state into a torch tensor:
         torch_game_state = torch.tensor(np.array([state]), dtype = torch.float32, device=self.device)
         # Compute agent's logits: 
         logit = self.policy(torch_game_state)
         # Extract probabilities associated with the prediction: 
-        probs = torch.exp(logit[0])
+        probs = torch.exp(logit[0]).detach().numpy()
+        # Computing policy entropy for diagnosis: 
+        self.entropy.append(-probs.dot(np.log(probs)))
         # Sample distribution to obtain action choice
         action_indices = [0 , 1 , 2 , 3 ] 
-        action_choice = np.random.choice(action_indices , p = probs.detach().numpy())
+        action_choice = np.random.choice(action_indices , p = probs)
         action_dict = {0 : 'up' , 1 : 'down' , 2 : 'left' , 3 : 'right', 4 : 'quit'}
         # Append logit value to the agent's logits attribute: 
         self.logits.append(logit[0][action_choice])
         return action_dict[action_choice]
+
+def count_pairs(state): 
+    num = 0
+    for i in range(state.shape[0]):
+        vec = state[i , :]
+        groups = [list(g) for k,g in groupby(vec)]
+        num += sum([(len(g)>1) for g in groups])
+    for j in range(state.shape[1]):
+        vec = state[: , j]
+        groups = [list(g) for k,g in groupby(vec)]
+        num += sum([(len(g)>1) for g in groups])
+    return num
 
 class GameLoop:
     def __init__(self, game: GameEnv, agent: Agent):
         self.game = game
         self.agent = agent
         self.input_handler = InputHandler(game)
+
 
     def run(self, print_episode):
         states = []
@@ -225,17 +241,21 @@ class GameLoop:
             actions.append(action)
 
             # Compute reward associated with action: 
-            r = np.sum(self.game.game_state)
+            if (np.max(self.game.game_state)==np.max(states[-1])): 
+                r = 0
+            else: 
+                r = max(2,np.log2(np.max(self.game.game_state)) - np.log2(np.max(states[-1])))
 
+            # Give an extra reward proportional to the difference in number of neighbouring tiles:
+            r += (count_pairs(self.game.game_state) - count_pairs(states[-1]))
             # Supply negative rewards for taking an action that does not change the game-board:
             if (self.game.game_state == states[-1]).all(): 
-                r = rewards[-1] -100
+                r += -2
 
             # Supplying further negative rewards and terminating the state if the agent visits the same state 4 times in a row: 
             if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
-                r += -400 
+                r = -5 
                 running = False
-
             rewards.append(r)
             # Check if agent trapped in terminal state (game over):
             gameover = self.game.gameover_check()
