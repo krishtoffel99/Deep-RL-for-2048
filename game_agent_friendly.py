@@ -172,9 +172,11 @@ class PolicyNetwork(nn.Module):
         self.linear_relu_softmax = nn.Sequential(
             nn.Linear(4*4 , 10),
             nn.ReLU(), 
-            nn.Linear(10 , 6), 
+            nn.Linear(10 , 10), 
             nn.ReLU(), 
-            nn.Linear(6 , 4), 
+            nn.Linear(10 , 6),
+            nn.ReLU(), 
+            nn.Linear(6,4), 
             nn.LogSoftmax(dim = 1)
         )
 
