@@ -56,17 +56,15 @@ class Config:
     GAMMA : float 
     SEED : int
     
-config = Config(NUM_EPISODES=20000 , LEARNING_RATE= 1e-6 , GAMMA=0.99 , SEED=0)
+config = Config(NUM_EPISODES=500 , LEARNING_RATE= 1e-6 , GAMMA=0.99 , SEED=0)
 
 # Using an ADAM optimiser for an initial test
 optimiser = optim.Adam(policy_model.parameters(), lr = config.LEARNING_RATE, weight_decay=1e-5)
 
 # Initialising tensorboard writer: 
-from torch.utils.tensorboard import SummaryWriter
-import datetime
-run_name = datetime.now().strftime("%Y%m%d-%H%M%S")
+import lab_diary_functions as ldf 
 
-writer = SummaryWriter(log_dir = f"runs/vanilla_REINFORCE/{run_name}")
+run_directory , writer = ldf.log_run(config , "runs/vanilla_REINFORCE")
 
 def compute_grad_norm(model):
     total_norm_sq = 0.0 
