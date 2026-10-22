@@ -36,10 +36,15 @@ def sum_elements_right(arr):
     return new_chained
 
 def new_tile(arr): 
-    zero_indices = np.where(arr == 0 )
+    # Compute zero tile locations:
+    zero_indices = np.where(arr == 0)
+    # Probabilistically include a 2 tile:
     insert_two = (np.random.uniform() <= 0.9)
+    # Probabilistically compute location of new tile:
     position_of_new_tile = np.random.choice(len(zero_indices[0]))
+    # Compute new tile index:
     new_tile_index = (zero_indices[0][position_of_new_tile] , zero_indices[1][position_of_new_tile])
+    # Insert tiles:
     arr_new = arr.copy() 
     if insert_two == True: 
         arr_new[new_tile_index] += 2 
@@ -49,8 +54,9 @@ def new_tile(arr):
 
 class GameEnv: 
     '''Environment for game'''
-    def __init__(self , game_state): 
+    def __init__(self , game_state, game_seed = None): 
         self.game_state = game_state
+        self.game_seed = game_seed
 
     def push_left(self):
         arr = self.game_state
@@ -240,23 +246,31 @@ class GameLoop:
             # Append action:
             actions.append(action)
 
+            #REWARD########################################################################################
             # Compute reward associated with action: 
+            # Provide a reward that is equal 
+            # Provide a reward if the agent increases the maximum tile on the board:
             if (np.max(self.game.game_state)==np.max(states[-1])): 
                 r = 0
             else: 
-                r = max(2,np.log2(np.max(self.game.game_state)) - np.log2(np.max(states[-1])))
+                r = np.max(self.game.game_state) - np.max(states[-1])
 
-            # Give an extra reward proportional to the difference in number of neighbouring tiles:
+            # # Give an extra reward proportional to the difference in number of neighbouring tiles:
             r += (count_pairs(self.game.game_state) - count_pairs(states[-1]))
             # Supply negative rewards for taking an action that does not change the game-board:
             if (self.game.game_state == states[-1]).all(): 
                 r += -2
 
             # Supplying further negative rewards and terminating the state if the agent visits the same state 4 times in a row: 
-            if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
-                r = -5 
-                running = False
+            # if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
+            #     r = -5 
+
             rewards.append(r)
+
+            if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
+                running = False
+            #END REWARD###################################################################################
+
             # Check if agent trapped in terminal state (game over):
             gameover = self.game.gameover_check()
 
@@ -266,6 +280,7 @@ class GameLoop:
                 running = False 
             else: 
                 states.append(self.game.game_state)
+            
 
             if print_episode:
                 print(action)
@@ -274,8 +289,11 @@ class GameLoop:
         return states, actions, rewards
 
 
-def generate(state_0, agent, print_episode = False):
-    game = GameEnv(state_0)
+def generate(state_0, agent, seed = None,  print_episode = False):
+    game = GameEnv(state_0 , seed)
+    # Initialise game seed if supplied: 
+    np.random.seed(game.game_seed)
+    # Run game loop to generate an episode:
     loop = GameLoop(game, agent)
     episode = loop.run(print_episode)
     return episode

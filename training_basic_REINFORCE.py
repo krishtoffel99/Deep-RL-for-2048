@@ -47,15 +47,26 @@ def reinforce_loss(agent, rewards, gamma):
 ####################################################################################################
 # TRAINING 
 ####################################################################################################
-NUM_EPISODES = 5000
-LEARNING_RATE = 1e-6
-GAMMA = 0.9
+from dataclasses import dataclass , asdict
+
+@dataclass 
+class Config: 
+    NUM_EPISODES : int
+    LEARNING_RATE : float 
+    GAMMA : float 
+    SEED : int
+    
+config = Config(NUM_EPISODES=20000 , LEARNING_RATE= 1e-6 , GAMMA=0.99 , SEED=0)
+
 # Using an ADAM optimiser for an initial test
-optimiser = optim.Adam(policy_model.parameters(), lr = LEARNING_RATE, weight_decay=1e-5)
+optimiser = optim.Adam(policy_model.parameters(), lr = config.LEARNING_RATE, weight_decay=1e-5)
 
 # Initialising tensorboard writer: 
 from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter(log_dir = "runs/vanilla_REINFORCE")
+import datetime
+run_name = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+writer = SummaryWriter(log_dir = f"runs/vanilla_REINFORCE/{run_name}")
 
 def compute_grad_norm(model):
     total_norm_sq = 0.0 
@@ -65,20 +76,24 @@ def compute_grad_norm(model):
             total_norm_sq += param_norm.item()**2
     return total_norm_sq**0.5
 
-for n in range(NUM_EPISODES):
+for n in range(config.NUM_EPISODES):
     print('RUNNING EPISODE: ', n)
     optimiser.zero_grad()
     # Initialise new agent: 
     agent = Agent(policy_model, [], [], device)
     # Generate an episode to train: 
-    states, actions, rewards = generate(state_0 , agent)
+    states, actions, rewards = generate(state_0 , agent, seed = config.SEED)
 
     # Compute loss: 
-    G, loss = reinforce_loss(agent, rewards, GAMMA)
+    G, loss = reinforce_loss(agent, rewards, config.GAMMA)
+
     # Compute gradients: 
     loss.backward() 
+
+    # Clipping gradients: 
+    torch.nn.utils.clip_grad_norm_(policy_model.parameters() , max_norm = 4.0)
+
     # Logging stuff: 
-    torch.nn.utils.clip_grad_norm_(policy_model.parameters() , max_norm = 5.0)
     writer.add_scalar("reward/episode_maxtile" , np.max(states[-1]), n)
     writer.add_scalar("reward/episode_initial_return" , G[0], n)
     writer.add_scalar("reward/episode_rewards" , sum(rewards) , n)
@@ -89,5 +104,6 @@ for n in range(NUM_EPISODES):
     optimiser.step()
 
 writer.close()
+
 
 
