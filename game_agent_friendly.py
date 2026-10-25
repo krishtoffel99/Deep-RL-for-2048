@@ -197,7 +197,7 @@ class Agent:
 
         # Load game state into a torch tensor:
         torch_game_state = torch.tensor(np.array([state]), dtype = torch.float32, device=self.device)
-        
+
         # Compute agent's logits: 
         logit = self.policy(torch_game_state)
         # Extract probabilities associated with the prediction: 
@@ -214,7 +214,7 @@ class Agent:
             if (arr_new == state).all():
                 probs[n] = 0
         # Renormalize probabilities: 
-        probs /= np.sum(probs)
+        probs = probs/np.sum(probs)
         action_choice = np.random.choice(action_indices , p = probs)
         
         # Append logit value to the agent's logits attribute: 
