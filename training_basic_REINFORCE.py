@@ -56,7 +56,7 @@ class Config:
     GAMMA : float 
     SEED : int
     
-config = Config(NUM_EPISODES=10000 , LEARNING_RATE= 1e-6 , GAMMA=0.99 , SEED=None)
+config = Config(NUM_EPISODES=100 , LEARNING_RATE= 1e-6 , GAMMA=0.99 , SEED=None)
 
 # Using an ADAM optimiser for an initial test
 optimiser = optim.Adam(policy_model.parameters(), lr = config.LEARNING_RATE, weight_decay=1e-5)
@@ -81,7 +81,6 @@ for n in range(config.NUM_EPISODES):
     agent = Agent(policy_model, [], [], device)
     # Generate an episode to train: 
     states, actions, rewards = generate(state_0 , agent, seed = config.SEED)
-
     # Compute loss: 
     G, loss = reinforce_loss(agent, rewards, config.GAMMA)
 

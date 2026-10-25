@@ -183,7 +183,6 @@ class PolicyNetwork(nn.Module):
     def forward(self , x): 
         # Invoke flatten to convert data array into a vector:
         x = self.flatten(x)
-
         # Run the input vector through the neural network to compute the outputs (called 'logits')
         logits = self.linear_relu_softmax(x)
         return logits
@@ -196,7 +195,6 @@ class Agent:
         self.entropy = entropy
     def agent_key_press(self, state):
         # Load game state into a torch tensor:
-        # We will use a log encoding for the game state so that the input features for the neural network are scaled between 0 and 11. We will then divide by 11.
         torch_game_state = torch.tensor(np.array([state]), dtype = torch.float32, device=self.device)
         # Compute agent's logits: 
         logit = self.policy(torch_game_state)
@@ -213,12 +211,13 @@ class Agent:
             arr_new = shift_func(state)
             if (arr_new == state).all():
                 probs[n] = 0
-            
+        # Renormalize probabilities: 
+        probs /= np.sum(probs)
         action_choice = np.random.choice(action_indices , p = probs)
         
         # Append logit value to the agent's logits attribute: 
         self.logits.append(logit[0][action_choice])
-        return action_dict[action_choice]
+        return action_dict[action_choice][0]
 
 def count_pairs(state): 
     num = 0
@@ -278,8 +277,8 @@ class GameLoop:
 
             rewards.append(r)
 
-            # if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
-            #     running = False
+            if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
+                running = False
             #END REWARD###################################################################################
 
             # Check if agent trapped in terminal state (game over):
