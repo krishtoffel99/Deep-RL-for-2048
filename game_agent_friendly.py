@@ -4,6 +4,7 @@
 import numpy as np
 from itertools import groupby, chain
 import torch
+import game_functions as gf
 def sum_elements_left(arr): 
     groupby_array =[list(g) for k , g in groupby(arr)]
     new = []
@@ -172,11 +173,9 @@ class PolicyNetwork(nn.Module):
         self.linear_relu_softmax = nn.Sequential(
             nn.Linear(4*4 , 10),
             nn.ReLU(), 
-            nn.Linear(10 , 10), 
+            nn.Linear(10 , 6), 
             nn.ReLU(), 
-            nn.Linear(10 , 6),
-            nn.ReLU(), 
-            nn.Linear(6,4), 
+            nn.Linear(6 , 4), 
             nn.LogSoftmax(dim = 1)
         )
 
@@ -184,6 +183,7 @@ class PolicyNetwork(nn.Module):
     def forward(self , x): 
         # Invoke flatten to convert data array into a vector:
         x = self.flatten(x)
+
         # Run the input vector through the neural network to compute the outputs (called 'logits')
         logits = self.linear_relu_softmax(x)
         return logits
@@ -196,6 +196,7 @@ class Agent:
         self.entropy = entropy
     def agent_key_press(self, state):
         # Load game state into a torch tensor:
+        # We will use a log encoding for the game state so that the input features for the neural network are scaled between 0 and 11. We will then divide by 11.
         torch_game_state = torch.tensor(np.array([state]), dtype = torch.float32, device=self.device)
         # Compute agent's logits: 
         logit = self.policy(torch_game_state)
@@ -205,8 +206,16 @@ class Agent:
         self.entropy.append(-probs.dot(np.log(probs)))
         # Sample distribution to obtain action choice
         action_indices = [0 , 1 , 2 , 3 ] 
+        # Look over possible actions and determine illegal moves. Set these probabilities to zero to prevent the agent from trying futile moves
+        action_dict = {0 : ('up', gf.push_up) , 1 : ('down', gf.push_down) , 2 : ('left',gf.push_left) , 3 : ('right', gf.push_right)}
+        for n in action_indices: 
+            shift_func = action_dict[n][1]
+            arr_new = shift_func(state)
+            if (arr_new == state).all():
+                probs[n] = 0
+            
         action_choice = np.random.choice(action_indices , p = probs)
-        action_dict = {0 : 'up' , 1 : 'down' , 2 : 'left' , 3 : 'right', 4 : 'quit'}
+        
         # Append logit value to the agent's logits attribute: 
         self.logits.append(logit[0][action_choice])
         return action_dict[action_choice]
@@ -269,8 +278,8 @@ class GameLoop:
 
             rewards.append(r)
 
-            if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
-                running = False
+            # if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
+            #     running = False
             #END REWARD###################################################################################
 
             # Check if agent trapped in terminal state (game over):
