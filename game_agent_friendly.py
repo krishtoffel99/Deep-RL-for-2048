@@ -194,9 +194,11 @@ class Agent:
         self.logits = logits
         self.entropy = entropy
     def agent_key_press(self, state):
-
+        # Load state as a normalised vector: 
+        mask = (state > 0)
+        state_normed = np.where(mask , np.log2(state), state)/11
         # Load game state into a torch tensor:
-        torch_game_state = torch.tensor(np.array([state]), dtype = torch.float32, device=self.device)
+        torch_game_state = torch.tensor(np.array([state_normed]), dtype = torch.float32, device=self.device)
 
         # Compute agent's logits: 
         logit = self.policy(torch_game_state)
@@ -213,6 +215,7 @@ class Agent:
             arr_new = shift_func(state)
             if (arr_new == state).all():
                 probs[n] = 0
+        print(probs)
         # Renormalize probabilities: 
         probs = probs/np.sum(probs)
         action_choice = np.random.choice(action_indices , p = probs)
