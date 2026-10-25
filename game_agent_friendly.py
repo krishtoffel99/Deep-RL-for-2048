@@ -194,8 +194,10 @@ class Agent:
         self.logits = logits
         self.entropy = entropy
     def agent_key_press(self, state):
+
         # Load game state into a torch tensor:
         torch_game_state = torch.tensor(np.array([state]), dtype = torch.float32, device=self.device)
+        
         # Compute agent's logits: 
         logit = self.policy(torch_game_state)
         # Extract probabilities associated with the prediction: 
