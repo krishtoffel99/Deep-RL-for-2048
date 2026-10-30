@@ -268,13 +268,13 @@ class GameLoop:
             if (np.max(self.game.game_state)==np.max(states[-1])): 
                 r = 0
             else: 
-                r = np.max(self.game.game_state) - np.max(states[-1])
+                r = 1
 
             # # Give an extra reward proportional to the difference in number of neighbouring tiles:
-            r += (count_pairs(self.game.game_state) - count_pairs(states[-1]))
-            # Supply negative rewards for taking an action that does not change the game-board:
-            if (self.game.game_state == states[-1]).all(): 
-                r += -2
+            # r += (count_pairs(self.game.game_state) - count_pairs(states[-1]))
+            # # Supply negative rewards for taking an action that does not change the game-board:
+            # if (self.game.game_state == states[-1]).all(): 
+            #     r += -2
 
             # Supplying further negative rewards and terminating the state if the agent visits the same state 4 times in a row: 
             # if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
@@ -282,8 +282,8 @@ class GameLoop:
 
             rewards.append(r)
 
-            if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
-                running = False
+            # if (len(states) >= 4) and (self.game.game_state == states[-3]).all(): 
+            #     running = False
             #END REWARD###################################################################################
 
             # Check if agent trapped in terminal state (game over):

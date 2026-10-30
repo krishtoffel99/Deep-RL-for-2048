@@ -56,7 +56,7 @@ class Config:
     GAMMA : float 
     SEED : int
     
-config = Config(NUM_EPISODES=10000 , LEARNING_RATE= 1e-3 , GAMMA=0.99 , SEED=None)
+config = Config(NUM_EPISODES=10000 , LEARNING_RATE= 1e-6 , GAMMA=0.9 , SEED=None)
 
 # Using an ADAM optimiser for an initial test
 optimiser = optim.Adam(policy_model.parameters(), lr = config.LEARNING_RATE, weight_decay=1e-5)
