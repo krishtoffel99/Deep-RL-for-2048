@@ -110,3 +110,16 @@ def push_down(arr):
         shifted_arrays_new = new_tile(shifted_arrays)
         arr = shifted_arrays_new
     return arr
+
+
+def count_pairs(state): 
+    num = 0
+    for i in range(state.shape[0]):
+        vec = state[i , :]
+        groups = [list(g) for k,g in groupby(vec)]
+        num += sum([(len(g)>1) for g in groups])
+    for j in range(state.shape[1]):
+        vec = state[: , j]
+        groups = [list(g) for k,g in groupby(vec)]
+        num += sum([(len(g)>1) for g in groups])
+    return num

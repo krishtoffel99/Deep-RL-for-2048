@@ -1,14 +1,22 @@
-from game_agent_friendly import PolicyNetwork, Agent, generate
+from game_agent_friendly import generate
 import torch
 import numpy as np
 import torch.optim as optim
+
+# Accessing model library: 
+import sys 
+from pathlib import Path 
+model_dir = Path(__file__).resolve().parent.parent / "models"
+sys.path.append(str(model_dir))
+
+from models import v1 as model
 
 # Get GPU device if available:
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
 # Initialise policy network
-policy_model = PolicyNetwork().to(device)
+policy_model = model.PolicyNetwork().to(device)
 
 # Initialise start state of the game:
 state_0 = np.array([[0 , 0 , 0 , 0] , [0 , 2 , 0 , 0] , [0 , 0 , 2 , 0 ] , [0 , 0 ,0 , 0]])
@@ -55,6 +63,7 @@ class Config:
     LEARNING_RATE : float 
     GAMMA : float 
     SEED : int
+
     
 config = Config(NUM_EPISODES=10000 , LEARNING_RATE= 1e-6 , GAMMA=0.9 , SEED=None)
 
@@ -78,7 +87,7 @@ for n in range(config.NUM_EPISODES):
     print('RUNNING EPISODE: ', n)
     optimiser.zero_grad()
     # Initialise new agent: 
-    agent = Agent(policy_model, [], [], device)
+    agent = model.Agent(policy_model, [], [], device)
     # Generate an episode to train: 
     states, actions, rewards = generate(state_0 , agent, seed = config.SEED)
     # Compute loss: 
